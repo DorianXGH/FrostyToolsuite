@@ -808,7 +808,7 @@ internal class Dynamic2018 : IDisposable
                     }
                     else
                     {
-                        uint blockCount = (originalSize & (uint)ProfilesLibrary.MaxBufferSize - 1) /
+                        uint blockCount = (originalSize + (uint)ProfilesLibrary.MaxBufferSize - 1) /
                                           (uint)ProfilesLibrary.MaxBufferSize;
                         dataStream.WriteUInt32(blockCount, Endian.Big);
                         blockCount = ((uint)entry.OriginalSize + (uint)ProfilesLibrary.MaxBufferSize - 1) /
