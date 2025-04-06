@@ -7,6 +7,7 @@ using Frosty.Sdk;
 using Frosty.Sdk.IO;
 using Frosty.Sdk.Managers;
 using Frosty.Sdk.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace Frosty.ModSupport.Mod;
 
@@ -66,6 +67,7 @@ public class FrostyMod : IResourceContainer
         FileInfo fileInfo = new(inPath);
         if (!fileInfo.Exists)
         {
+            FrostyLogger.Logger?.LogInformation("Mod file doesn't exist {}", inPath);
             return null;
         }
 
@@ -74,21 +76,25 @@ public class FrostyMod : IResourceContainer
             // read header
             if (Magic != stream.ReadUInt64())
             {
+                FrostyLogger.Logger?.LogInformation("Mod file wrong magic {}", inPath);
                 return null;
             }
 
             if (Version != stream.ReadUInt32())
             {
+                FrostyLogger.Logger?.LogInformation("Mod file wrong version {}", inPath);
                 return null;
             }
-
+            FrostyLogger.Logger?.LogInformation("Accepting mod file format for {}", inPath);
             long dataOffset = stream.ReadInt64();
             int dataCount = stream.ReadInt32();
 
             if (ProfilesLibrary.ProfileName != stream.ReadNullTerminatedString())
             {
+                FrostyLogger.Logger?.LogInformation("Mod file wrong profile {}", inPath);
                 return null;
             }
+            FrostyLogger.Logger?.LogInformation("Accepting profile for {}", inPath);
 
             uint head = stream.ReadUInt32();
 
@@ -139,7 +145,7 @@ public class FrostyMod : IResourceContainer
             {
                 data[i] = new ResourceData(fileInfo.FullName, offset + stream.ReadInt64(), stream.ReadInt32());
             }
-
+            FrostyLogger.Logger?.LogInformation("Returning details for {}", inPath);
             return new FrostyMod(modDetails, head, sha1, resources, data);
         }
     }
@@ -153,6 +159,7 @@ public class FrostyMod : IResourceContainer
     {
         if (!File.Exists(inPath))
         {
+            FrostyLogger.Logger?.LogInformation("Mod file doesn't exist {}", inPath);
             return null;
         }
 
@@ -161,20 +168,25 @@ public class FrostyMod : IResourceContainer
             // read header
             if (Magic != stream.ReadUInt64())
             {
+                FrostyLogger.Logger?.LogInformation("Mod file wrong magic {}", inPath);
                 return null;
             }
 
             if (Version != stream.ReadUInt32())
             {
+                FrostyLogger.Logger?.LogInformation("Mod file wrong version {}", inPath);
                 return null;
             }
-
+            FrostyLogger.Logger?.LogInformation("Accepting mod file format for {}", inPath);
             stream.Position += sizeof(long) + sizeof(int);
-
-            if (ProfilesLibrary.ProfileName != stream.ReadNullTerminatedString())
+            string modProfile = stream.ReadNullTerminatedString();
+            if (ProfilesLibrary.ProfileName != modProfile)
             {
+                FrostyLogger.Logger?.LogInformation("Mod file wrong profile {}", inPath);
+                FrostyLogger.Logger?.LogInformation("Expected {} got {}", ProfilesLibrary.ProfileName, modProfile);
                 return null;
             }
+            FrostyLogger.Logger?.LogInformation("Mod file accepting profile {}", inPath);
 
             stream.Position += sizeof(uint);
 

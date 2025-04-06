@@ -45,11 +45,14 @@ internal class Dynamic2018 : IDisposable
         Block<byte> modifiedSuperBundle = new(0);
         using (BlockStream modifiedStream = new(modifiedSuperBundle, true))
         {
+            FrostyLogger.Logger?.LogInformation("Processing bundles for {}", inPath);
             ProcessBundles(inPath, inCreateNewPatch, inSbIc, inModInfo, inInstallChunkWriter, modifiedStream, toc);
 
             // if we modify some bundles that are not in the patch we need to parse the base superbundle as well
+            
             if (inModInfo.Modified.Bundles.Count > 0 || inModInfo.Modified.Chunks.Count > 0)
             {
+                FrostyLogger.Logger?.LogInformation("Modifying bundles not in patch for {}, {} bundles, {} chunks", inPath, inModInfo.Modified.Bundles.Count, inModInfo.Modified.Chunks.Count);
                 string basePath = FileSystemManager.ResolvePath(false, $"{inSbIc.Name}.toc");
                 ProcessBundles(basePath, true, inSbIc, inModInfo, inInstallChunkWriter, modifiedStream, toc);
             }
@@ -529,6 +532,8 @@ internal class Dynamic2018 : IDisposable
             res.Set("resRid", modEntry.ResRid);
             resBundleSize += modEntry.Size;
 
+            FrostyLogger.Logger?.LogInformation("Processing mod entry {} with sha {}", name, modEntry.Sha1.ToString());
+
             if (ProfilesLibrary.FrostbiteVersion <= "2014.4.11")
             {
                 res.Set("casPatchType", 1);
@@ -780,7 +785,8 @@ internal class Dynamic2018 : IDisposable
         FrostyLogger.Logger?.LogWarning("Non cas superbundle, there might be some issues.");
 
         uint baseBundleSize;
-        Block<byte> bundleMeta;
+        Block<byte> bundleMeta = new(0);
+        BlockStream bundleMetaStream = new(bundleMeta, true);
         Block<byte> data = new(0);
         BlockStream dataStream = new(data, true);
         if (isDelta)
@@ -790,7 +796,8 @@ internal class Dynamic2018 : IDisposable
         else
         {
             baseBundleSize = (uint)inStream.Position;
-            bundleMeta = BinaryBundle.Modify(inStream, inModInfo, m_modifiedEbx, m_modifiedRes, m_modifiedChunks,
+            BinaryBundle bundle = new BinaryBundle(inStream);
+            bundle.Modify(inModInfo, m_modifiedEbx, m_modifiedRes, m_modifiedChunks,
                 (entry, i, isAdded, isModified, originalSize) =>
                 {
                     if (!isModified)
@@ -824,6 +831,7 @@ internal class Dynamic2018 : IDisposable
                         }
                     }
                 });
+            bundle.WriteToStream(bundleMetaStream);
             baseBundleSize = (uint)inStream.Position - baseBundleSize - 4;
         }
 
@@ -871,8 +879,11 @@ public partial class FrostyModExecutor
 
         using (Dynamic2018 action = new(m_modifiedEbx, m_modifiedRes, m_modifiedChunks, GetData))
         {
+            FrostyLogger.Logger?.LogInformation("Modding superbundle chunk {}", inSbIc.Name);
             action.ModSuperBundle(tocPath, createNewPatch, inSbIc, inModInfo, inInstallChunkWriter);
 
+
+            FrostyLogger.Logger?.LogInformation("Writing toc for {}", inSbIc.Name);
             FileInfo modifiedToc = new(Path.Combine(m_modDataPath, $"{inSbIc.Name}.toc"));
             Directory.CreateDirectory(modifiedToc.DirectoryName!);
 
@@ -885,6 +896,7 @@ public partial class FrostyModExecutor
 
             if (action.SbData is not null)
             {
+                FrostyLogger.Logger?.LogInformation("Writing superbundle data for {}", inSbIc.Name);
                 using (FileStream stream = new(modifiedToc.FullName.Replace(".toc", ".sb"), FileMode.Create, FileAccess.Write))
                 {
                     stream.Write(action.SbData);
@@ -894,6 +906,7 @@ public partial class FrostyModExecutor
             else
             {
                 // if the sb exists, but we just didnt modify it, create a symbolic link for it
+                FrostyLogger.Logger?.LogInformation("Symlinking superbundle data for {}", inSbIc.Name);
                 string sbPath = tocPath.Replace(".toc", ".sb");
                 if (File.Exists(sbPath))
                 {

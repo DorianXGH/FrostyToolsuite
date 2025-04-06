@@ -93,6 +93,7 @@ public partial class FrostyModExecutor
             string extension = Path.GetExtension(modInfo.Path);
             if (extension == ".fbmod")
             {
+                FrostyLogger.Logger?.LogInformation("Processing mod {}", modInfo.Path);
                 FrostyMod? mod = FrostyMod.Load(modInfo.Path);
                 if (mod is null)
                 {
@@ -134,6 +135,7 @@ public partial class FrostyModExecutor
         // clear old generated mod data
         if (Directory.Exists(inModPackPath))
         {
+            FrostyLogger.Logger?.LogInformation("Existing ModData");
             Directory.Delete(inModPackPath, true);
         }
         Directory.CreateDirectory(m_modDataPath);
@@ -145,6 +147,7 @@ public partial class FrostyModExecutor
         // modify the superbundles and write them to mod data
         foreach (KeyValuePair<int, SuperBundleModInfo> sb in m_superBundleModInfos)
         {
+            FrostyLogger.Logger?.LogInformation("Processing Super Bundle {}", sb.Key);
             SuperBundleInstallChunk sbIc = FileSystemManager.GetSuperBundleInstallChunk(sb.Key);
 
             InstallChunkWriter installChunkWriter = GetInstallChunkWriter(sbIc);
@@ -153,11 +156,13 @@ public partial class FrostyModExecutor
             {
                 case BundleFormat.Dynamic2018:
                     // clear Data so we can add only the ones we need to write to cas
+                    FrostyLogger.Logger?.LogInformation("Super Bundle {} is Dynamic 2018", sb.Key);
                     sb.Value.Data.Clear();
                     ModDynamic2018(sbIc, sb.Value, installChunkWriter);
                     break;
                 case BundleFormat.Manifest2019:
                     // write all cas files before the action, since we need the offset before writing
+                    FrostyLogger.Logger?.LogInformation("Super Bundle {} is Manifest 2019", sb.Key);
                     WriteCasArchives(sb.Value, installChunkWriter);
                     ModManifest2019(sbIc, sb.Value, installChunkWriter);
                     break;
@@ -169,6 +174,8 @@ public partial class FrostyModExecutor
                     break;
             }
         }
+
+        FrostyLogger.Logger?.LogInformation("Writing cas");
 
         // we need to write the cas files at the end bc of non cas format
         if (FileSystemManager.BundleFormat == BundleFormat.Dynamic2018 || FileSystemManager.BundleFormat == BundleFormat.SuperBundleManifest)
@@ -733,6 +740,7 @@ public partial class FrostyModExecutor
             string extension = Path.GetExtension(path);
             if (extension == ".fbmod")
             {
+                FrostyLogger.Logger?.LogInformation("Generating mod info for path {}", path);
                 modDetails = FrostyMod.GetModDetails(path);
             }
             else if (extension == ".fbcollection")
@@ -746,6 +754,7 @@ public partial class FrostyModExecutor
 
             if (modDetails is null)
             {
+                FrostyLogger.Logger?.LogInformation("Null details, stopping");
                 return modInfoList;
             }
 
@@ -776,6 +785,6 @@ public partial class FrostyModExecutor
             return (block, false);
         }
 
-        throw new Exception();
+        throw new Exception("Data not found for Hash " + sha1.ToString());
     }
 }

@@ -31,6 +31,9 @@ internal static partial class Program
             : new DirectoryInfo(Path.Combine(FileSystemManager.BasePath, "ModData", "Default"));
 
         IEnumerable<string> mods = Directory.GetFiles(inModsDirInfo.FullName);
+        foreach (string mod in mods) {
+            FrostyLogger.Logger?.LogInformation("Found mod {}", mod);
+        }
 
         FileInfo modLoadOrderPath = new(Path.Combine(inModsDirInfo.FullName, "load_order.json"));
         if (modLoadOrderPath.Exists)
