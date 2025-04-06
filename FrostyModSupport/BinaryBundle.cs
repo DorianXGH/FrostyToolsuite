@@ -199,6 +199,8 @@ public class BinaryBundle {
         res = new List<ResModEntry>(header.resCount);
         chunks = new List<ChunkModEntry>(header.chunkCount);
 
+        strings = new Dictionary<string, uint>();
+
         // read sha1s
         Sha1[] hashes = new Sha1[header.totalCount];
         for (int i = 0; i < header.totalCount; i++)
