@@ -660,11 +660,13 @@ internal class Manifest2019 : IDisposable
             files.Add((file, inStream.ReadUInt32(Endian.Big), inStream.ReadUInt32(Endian.Big)));
         }
 
-        Block<byte> bundleMeta;
+        Block<byte> bundleMeta = new(0);
+        BlockStream bundleMetaStream = new(bundleMeta, true);
         if (inlineBundle)
         {
             inStream.Position = inOffset + bundleOffset;
-            bundleMeta = BinaryBundle.Modify(inStream, inModInfo, m_modifiedEbx, m_modifiedRes, m_modifiedChunks,
+            BinaryBundle bundle = new BinaryBundle(inStream);
+            bundle.Modify(inModInfo, m_modifiedEbx, m_modifiedRes, m_modifiedChunks,
                 (entry, i, isAdded, isModified, _) =>
                 {
                     if (!isModified)
@@ -688,6 +690,7 @@ internal class Manifest2019 : IDisposable
                         files[i] = info;
                     }
                 });
+            bundle.WriteToStream(bundleMetaStream);
         }
         else
         {
@@ -698,7 +701,8 @@ internal class Manifest2019 : IDisposable
             }
             using (BlockStream bundleStream = BlockStream.FromFile(path, files[0].Item2, (int)files[0].Item3))
             {
-                bundleMeta = BinaryBundle.Modify(bundleStream, inModInfo, m_modifiedEbx, m_modifiedRes, m_modifiedChunks,
+                BinaryBundle bundle = new BinaryBundle(inStream);
+                bundle.Modify(inModInfo, m_modifiedEbx, m_modifiedRes, m_modifiedChunks,
                     (entry, i, isAdded, isModified, _) =>
                     {
                         if (!isModified)
@@ -721,6 +725,7 @@ internal class Manifest2019 : IDisposable
                             files[i + 1] = info;
                         }
                     });
+                bundle.WriteToStream(bundleMetaStream);
                 Debug.Assert(bundleStream.Position == bundleStream.Length, "We did not read the bundle meta completely");
             }
         }
