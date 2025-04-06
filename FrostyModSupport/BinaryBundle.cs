@@ -431,7 +431,7 @@ public class BinaryBundle {
             outStream.WriteByte(0);
         }
 
-        header.size = (uint)outStream.Length - 4 ;
+        header.size = (uint)outStream.Length ;
         header.stringsOffset = header.metaOffset + header.metaSize;
         header.WriteToStream(outStream);
     }
